@@ -1,5 +1,5 @@
 fastapi
-"uvicorn[standard]"
-"passlib[bcrypt]"
-"python-jose[cryptography]"
+uvicorn[standard]
+passlib[bcrypt]
+python-jose[cryptography]
 sqlalchemy

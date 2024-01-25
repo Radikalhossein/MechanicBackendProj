@@ -5,9 +5,11 @@ from models.users import User
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def create_user(db, user):
+def create_user(db, user, is_admin=False):
     hashed_password = pwd_context.hash(user.password)
-    db_user = User(username=user.username, hashed_password=hashed_password)
+    db_user = User(
+        username=user.username, hashed_password=hashed_password, is_admin=is_admin
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
