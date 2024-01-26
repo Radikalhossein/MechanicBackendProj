@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -8,22 +10,39 @@ from crud.admin import (
     delete_car,
     delete_company,
     delete_user,
+    get_services,
     get_user_by_id,
     get_users,
+    update_car,
+    update_company,
     update_user,
 )
 from crud.services import (
+    delete_service,
+    delete_service_item,
     get_car_by_id,
     get_cars,
     get_companies,
     get_company_by_id,
     get_company_by_name,
+    get_service,
+    get_service_item,
+    update_service,
+    update_service_item,
 )
 from crud.users import create_user, get_user
 from database import get_db
 from models.users import User
 from routers.users import get_current_user
-from schemas.admin import UserCreate, UserItem, UserList, UserUpdate
+from schemas.admin import (
+    CarUpdate,
+    CompanyUpdate,
+    ServiceInDB,
+    UserCreate,
+    UserItem,
+    UserList,
+    UserUpdate,
+)
 from schemas.services import (
     CarCreate,
     CarDetail,
@@ -31,6 +50,9 @@ from schemas.services import (
     CompanyCreate,
     CompanyDetail,
     CompanyItem,
+    ServiceItemInDB,
+    ServiceItemUpdate,
+    ServiceUpdate,
 )
 
 router = APIRouter()
@@ -148,6 +170,24 @@ async def company_delete(
     return delete_company(db, company)
 
 
+@router.put("/company/{company_id}", response_model=CompanyItem)
+async def company_update(
+    company_id: int,
+    data: CompanyUpdate,
+    _: User = Depends(is_admin),
+    db: Session = Depends(get_db),
+):
+    company = get_company_by_id(db, company_id)
+
+    if not company:
+        raise HTTPException(status_code=404, detail="company with this id not found")
+
+    if get_company_by_name(db, data.name):
+        raise HTTPException(status_code=403, detail="company with this name exists")
+
+    return update_company(db, company, data)
+
+
 @router.post("/car", response_model=CarItem)
 async def car_create(
     data: CarCreate, _: User = Depends(is_admin), db: Session = Depends(get_db)
@@ -192,3 +232,96 @@ async def car_delete(
         raise HTTPException(status_code=404, detail="car with this id not found")
 
     return delete_car(db, car)
+
+
+@router.put("/car/{car_id}", response_model=CarDetail)
+async def car_update(
+    car_id: int,
+    data: CarUpdate,
+    _: User = Depends(is_admin),
+    db: Session = Depends(get_db),
+):
+    car = get_car_by_id(db, car_id)
+
+    if not car:
+        raise HTTPException(status_code=404, detail="car not found")
+
+    company = get_company_by_id(db, data.company)
+    if not company:
+        raise HTTPException(status_code=400, detail="company with this id not found")
+
+    if check_unique_car(db, company, data.name):
+        raise HTTPException(status_code=400, detail="company has car with same name")
+
+    car = update_car(db, car, data)
+    return car
+
+
+@router.get("/service", response_model=list[ServiceInDB])
+async def service_list(
+    customer: str = None,
+    mechanic: int = None,
+    start_date: date = None,
+    end_date: date = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(is_admin),
+):
+    return get_services(db, customer, mechanic, start_date, end_date)
+
+
+@router.get("/service/{service_id}", response_model=ServiceInDB)
+async def service_detail(
+    service_id: int, db: Session = Depends(get_db), _: User = Depends(is_admin)
+):
+    return get_service(db, service_id)
+
+
+@router.put("/service/{service_id}", response_model=ServiceInDB)
+async def service_update(
+    service_id: int,
+    data: ServiceUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(is_admin),
+):
+    service = get_service(db, service_id)
+    if not service:
+        raise HTTPException(status_code=404)
+    return update_service(db, service, data)
+
+
+@router.delete("/service/{service_id}", response_model=ServiceInDB)
+async def service_delete(
+    service_id: int, db: Session = Depends(get_db), _: User = Depends(is_admin)
+):
+    service = get_service(db, service_id)
+    if not service:
+        raise HTTPException(status_code=404)
+
+    return delete_service(db, service)
+
+
+@router.put("/item/{item_id}", response_model=ServiceItemInDB)
+async def service_item_update(
+    item_id: int,
+    data: ServiceItemUpdate,
+    _: User = Depends(is_admin),
+    db: Session = Depends(get_db),
+):
+    item = get_service_item(db, item_id)
+
+    if not item:
+        raise HTTPException(status_code=404)
+
+    return update_service_item(db, item, data)
+
+
+@router.delete("/item/{item_id}", response_model=ServiceItemInDB)
+async def service_item_delete(
+    item_id: int, db: Session = Depends(get_db), _: User = Depends(is_admin)
+):
+    item = get_service_item(db, item_id)
+
+    if not item:
+        raise HTTPException(status_code=404)
+
+    return delete_service_item(db, item)

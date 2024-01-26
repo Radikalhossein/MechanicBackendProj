@@ -51,6 +51,11 @@ class ServiceUpdate(ServiceCreate):
 
 class ServiceInDBBase(ServiceBase):
     id: int
+    total_price: int
+    car: int
+
+    class Config:
+        from_attributes = True
 
 
 class ServiceItemBase(BaseModel):

@@ -6,7 +6,7 @@ from jose import JWTError, jwt
 
 from crud.users import authenticate_user, create_user, get_user
 from database import get_db
-from schemas.users import Token, UserBase, UserCreate
+from schemas.users import SignupResponse, Token, UserBase, UserCreate
 from utils import ALGORITHM, SECRET_KEY, create_access_token
 
 router = APIRouter()
@@ -34,14 +34,15 @@ async def get_current_user(
     return user
 
 
-@router.post("/signup")
+@router.post("/signup", response_model=SignupResponse)
 async def signup(user: UserCreate, db=Depends(get_db)):
     if get_user(db, user.username):
         raise HTTPException(
             status_code=400, detail="user with this username already exists"
         )
-    create_user(db, user)
-    return UserBase(username=user.username)
+    user = create_user(db, user)
+    access_token = create_access_token(data={"sub": user.username})
+    return SignupResponse(username=user.username, access_token=access_token)
 
 
 @router.post("/login")

@@ -11,3 +11,7 @@ class UserCreate(UserBase):
 
 class Token(BaseModel):
     access_token: str
+
+
+class SignupResponse(UserBase, Token):
+    ...

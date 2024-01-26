@@ -122,6 +122,7 @@ def create_service_item(db: Session, data: ServiceItemCreate) -> ServiceItem:
 def delete_service(db: Session, service: Service) -> Service:
     db.delete(service)
     db.commit()
+    db.query(ServiceItem).filter(ServiceItem.service == service.id).delete()
     return service
 
 

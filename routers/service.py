@@ -11,6 +11,7 @@ from crud.services import (
     get_car_by_id,
     get_cars,
     get_companies,
+    get_company_by_id,
     get_service,
     get_service_item,
     get_user_services,
@@ -23,6 +24,7 @@ from models.users import User
 from routers.users import get_current_user
 from schemas.services import (
     CarDetail,
+    CompanyDetail,
     CompanyItem,
     ServiceCreate,
     ServiceInDB,
@@ -43,7 +45,8 @@ async def service_list(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return get_user_services(db, user.id, customer, start_date, end_date)
+    services = get_user_services(db, user.id, customer, start_date, end_date)
+    return services
 
 
 @router.post("/", response_model=ServiceInDB)
@@ -68,48 +71,6 @@ async def service_item_create(
         raise HTTPException(status_code=404)
 
     return create_service_item(db, data)
-
-
-@router.get("/{service_id}", response_model=ServiceInDB)
-async def service_detail(
-    service_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    if not validate_service(db, service_id, user.id):
-        raise HTTPException(status_code=404)
-
-    return get_service(db, service_id)
-
-
-@router.delete("/{service_id}", response_model=ServiceInDB)
-async def service_delete(
-    service_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    if not validate_service(db, service_id):
-        raise HTTPException(status_code=404)
-
-    service = get_service(db, service_id)
-    return delete_service(db, service)
-
-
-@router.put("/{service_id}", response_model=ServiceInDB)
-async def service_update(
-    service_id: int,
-    data: ServiceUpdate,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    if not validate_service(db, service_id):
-        raise HTTPException(status_code=404)
-
-    if not get_car_by_id(db, data.car):
-        raise HTTPException(status_code=404)
-
-    service = get_service(db, service_id)
-    return update_service(db, service, data)
 
 
 @router.get("/company", response_model=list[CompanyItem])
@@ -151,3 +112,69 @@ async def service_item_delete(
         raise HTTPException(404)
 
     return delete_service_item(db, service_item)
+
+
+@router.get("/car/{car_id}", response_model=CarDetail)
+async def car_detail(
+    car_id: int, _: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    car = get_car_by_id(db, car_id)
+
+    if not car:
+        raise HTTPException(status_code=404, detail="car with this id not found")
+
+    return car
+
+
+@router.get("/company/{company_id}", response_model=CompanyDetail)
+async def company_detail(
+    company_id: int, _: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    company = get_company_by_id(db, company_id)
+
+    if not company:
+        raise HTTPException(status_code=404, detail="company with this id not found")
+
+    return company
+
+
+@router.get("/{service_id}", response_model=ServiceInDB)
+async def service_detail(
+    service_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not validate_service(db, service_id, user.id):
+        raise HTTPException(status_code=404)
+
+    return get_service(db, service_id)
+
+
+@router.delete("/{service_id}", response_model=ServiceInDB)
+async def service_delete(
+    service_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not validate_service(db, service_id, user.id):
+        raise HTTPException(status_code=404)
+
+    service = get_service(db, service_id)
+    return delete_service(db, service)
+
+
+@router.put("/{service_id}", response_model=ServiceInDB)
+async def service_update(
+    service_id: int,
+    data: ServiceUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not validate_service(db, service_id, user.id):
+        raise HTTPException(status_code=404)
+
+    if not get_car_by_id(db, data.car):
+        raise HTTPException(status_code=404)
+
+    service = get_service(db, service_id)
+    return update_service(db, service, data)

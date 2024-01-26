@@ -1,8 +1,10 @@
+from datetime import date
+
 from sqlalchemy.orm import Session
 
-from models.services import Car, Company
+from models.services import Car, Company, Service, ServiceItem
 from models.users import User
-from schemas.admin import UserUpdate
+from schemas.admin import CarUpdate, CompanyUpdate, UserUpdate
 from schemas.services import CarCreate, CompanyCreate
 
 
@@ -64,5 +66,44 @@ def delete_car(db: Session, car: Car) -> Car:
     return car
 
 
+def update_car(db: Session, car: Car, data: CarUpdate):
+    car.name = data.name
+    car.company = data.company
+    db.commit()
+    return car
+
+
+def update_company(db: Session, company: Company, data: CompanyUpdate):
+    company.name = data.name
+    db.commit()
+    return company
+
+
 def check_unique_car(db: Session, company: Company, name: str):
-    return db.query(Car).filter(Car.company == company.id and Car.name == name).all()
+    return (
+        db.query(Car).filter(Car.company == company.id).filter(Car.name == name).all()
+    )
+
+
+def get_services(
+    db: Session,
+    customer: str = None,
+    mechanic: int = None,
+    start_date: date = None,
+    end_date: date = None,
+) -> list[Service]:
+    query = db.query(Service)
+
+    if customer is not None:
+        query = query.filter(Service.customer.icontains(customer))
+
+    if mechanic is not None:
+        query = query.filter(Service.mechanic == mechanic)
+
+    if start_date is not None:
+        query = query.filter(Service.date > start_date)
+
+    if end_date is not None:
+        query = query.filter(Service.date < end_date)
+
+    return query
