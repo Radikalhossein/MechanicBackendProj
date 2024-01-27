@@ -25,7 +25,7 @@ def create_company(db: Session, data: CompanyCreate) -> Company:
     company = Company(name=data.name)
     db.add(company)
     db.commit()
-    db.refresh()
+    db.refresh(company)
     return company
 
 
